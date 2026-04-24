@@ -16,29 +16,28 @@ enum class TokenType {
 };
 
 struct Token {
-    TokenType type;
-    double value;       // for NUMBER, CONSTANT
-    std::string name;   // for OPERATOR (e.g. "+"), FUNCTION (e.g. "sin")
+    TokenType   type;
+    double      value;  // NUMBER, CONSTANT
+    std::string name;   // OPERATOR (e.g. "+"), FUNCTION (e.g. "sin")
+    int         arity;  // FUNCTION only: set by Parser (1 or 2); 0 elsewhere
 };
 
 class Tokenizer {
 public:
     explicit Tokenizer(const std::string& input);
     Token next();
-    void reset();
+    void  reset();
 
 private:
     std::string input_;
-    size_t pos_;
+    size_t      pos_;
 
     void skipWhitespace();
     bool isAtEnd() const;
-    char peek() const;
+    char peek()    const;
     char advance();
-    bool match(char c);
 
     Token scanNumber();
-    Token scanOperator();
     Token scanIdentifier();
 };
 

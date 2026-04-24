@@ -3,19 +3,13 @@
 #include "utils.h"
 #include <cmath>
 #include <stack>
-#include <unordered_set>
-
-namespace {
-    bool isBinaryLog(const std::string& name, size_t stackSize) {
-        return name == "log" && stackSize >= 2;
-    }
-}
 
 double Evaluator::evaluate(const std::vector<Token>& rpn) {
     std::stack<double> st;
 
     for (const Token& t : rpn) {
         switch (t.type) {
+
             case TokenType::NUMBER:
             case TokenType::CONSTANT:
                 st.push(t.value);
@@ -23,18 +17,18 @@ double Evaluator::evaluate(const std::vector<Token>& rpn) {
 
             case TokenType::OPERATOR: {
                 if (st.size() < 2)
-                    throw CalculatorException("Insufficient operands for operator " + t.name);
+                    throw CalculatorException("Insufficient operands for '" + t.name + "'");
                 double b = st.top(); st.pop();
                 double a = st.top(); st.pop();
-                if (t.name == "+") st.push(a + b);
+                if      (t.name == "+") st.push(a + b);
                 else if (t.name == "-") st.push(a - b);
                 else if (t.name == "*") st.push(a * b);
                 else if (t.name == "/") {
-                    if (b == 0) throw CalculatorException("Division by zero");
+                    if (b == 0.0) throw CalculatorException("Division by zero");
                     st.push(a / b);
                 }
                 else if (t.name == "%") {
-                    if (b == 0) throw CalculatorException("Modulo by zero");
+                    if (b == 0.0) throw CalculatorException("Modulo by zero");
                     st.push(std::fmod(a, b));
                 }
                 else if (t.name == "^") st.push(std::pow(a, b));
@@ -43,13 +37,14 @@ double Evaluator::evaluate(const std::vector<Token>& rpn) {
             }
 
             case TokenType::FUNCTION: {
-                if (isBinaryLog(t.name, st.size())) {
+                int arity = t.arity;
+                if (static_cast<int>(st.size()) < arity)
+                    throw CalculatorException("Insufficient arguments for '" + t.name + "'");
+                if (arity == 2) {
                     double b = st.top(); st.pop();
                     double a = st.top(); st.pop();
                     st.push(math_functions::call2(t.name, a, b));
                 } else {
-                    if (st.size() < 1)
-                        throw CalculatorException("Insufficient arguments for " + t.name);
                     double a = st.top(); st.pop();
                     st.push(math_functions::call(t.name, a));
                 }
@@ -57,11 +52,12 @@ double Evaluator::evaluate(const std::vector<Token>& rpn) {
             }
 
             default:
-                throw CalculatorException("Unexpected token in RPN");
+                throw CalculatorException("Unexpected token in RPN stream");
         }
     }
 
     if (st.size() != 1)
-        throw CalculatorException("Invalid expression: stack has " + std::to_string(st.size()) + " values");
+        throw CalculatorException("Invalid expression (stack contains "
+                                  + std::to_string(st.size()) + " values)");
     return st.top();
 }

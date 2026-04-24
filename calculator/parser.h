@@ -11,14 +11,10 @@ public:
 
 private:
     Tokenizer& tokenizer_;
-    Token lookahead_;
-    bool hasLookahead_;
+    Token      current_;
 
     void advance();
-    const Token& current() const;
-    bool isUnaryContext() const;
-
-    int precedence(const std::string& op) const;
+    int  precedence(const std::string& op) const;
     bool isRightAssoc(const std::string& op) const;
 };
 

@@ -12,6 +12,7 @@ static std::string trim(const std::string& s) {
     return s.substr(start, end - start + 1);
 }
 
+// Returns false only when the user wants to quit.
 static bool handleCommand(const std::string& line) {
     std::string t = trim(line);
     if (t.empty()) return true;
@@ -19,9 +20,10 @@ static bool handleCommand(const std::string& line) {
     if (t == "quit" || t == "exit") return false;
 
     if (t == "help") {
-        std::cout << "Scientific Calculator\n"
-                     "  Enter expressions: 2+3*4, sin(pi/2), log(100)\n"
-                     "  Commands: mode degree | mode radian | help | quit\n";
+        std::cout <<
+            "Scientific Calculator\n"
+            "  Expressions : 2+3*4, sin(pi/2), log(100), log(2,8), factorial(5)\n"
+            "  Commands    : mode degree | mode radian | help | quit\n";
         return true;
     }
 
@@ -36,23 +38,31 @@ static bool handleCommand(const std::string& line) {
         return true;
     }
 
-    return false;
+    return false; // not a command — caller will try evaluating it
 }
 
 int main() {
     Evaluator eval;
-    std::cout << "Scientific Calculator. Type 'help' for commands, 'quit' to exit.\n";
+    std::cout << "Scientific Calculator  |  type 'help' for commands, 'quit' to exit.\n";
 
     while (true) {
         std::cout << "> ";
         std::string line;
         if (!std::getline(std::cin, line)) break;
 
-        if (handleCommand(line)) continue;
+        std::string t = trim(line);
+        if (t.empty()) continue;
+
+        // Check built-in commands first
+        if (t == "quit" || t == "exit") break;
+        if (t == "help" || t == "mode degree" || t == "mode radian") {
+            handleCommand(t);
+            continue;
+        }
 
         try {
             Tokenizer tok(line);
-            Parser parser(tok);
+            Parser    parser(tok);
             std::vector<Token> rpn = parser.parse();
             double result = eval.evaluate(rpn);
             std::cout << result << "\n";
@@ -62,5 +72,6 @@ int main() {
             std::cerr << "Error: " << e.what() << "\n";
         }
     }
+
     return 0;
 }

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(cli-calculator LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(calculator
     main.cpp
@@ -15,7 +16,7 @@ add_executable(calculator
 target_include_directories(calculator PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(MSVC)
-    target_compile_options(calculator PRIVATE /W4)
+    target_compile_options(calculator PRIVATE /W4 /WX)
 else()
-    target_compile_options(calculator PRIVATE -Wall -Wextra -O3)
+    target_compile_options(calculator PRIVATE -Wall -Wextra -O2)
 endif()
