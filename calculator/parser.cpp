@@ -1,15 +1,6 @@
 #include "parser.h"
 #include "utils.h"
 #include <stack>
-#include <unordered_set>
-
-namespace {
-    const std::unordered_set<std::string> FUNC_NAMES = {
-        "sin", "cos", "tan", "asin", "acos", "atan",
-        "sinh", "cosh", "tanh", "log", "ln", "exp", "sqrt", "cbrt",
-        "abs", "floor", "ceil", "factorial", "neg"
-    };
-}
 
 Parser::Parser(Tokenizer& tok) : tokenizer_(tok) {
     advance();
@@ -49,6 +40,26 @@ std::vector<Token> Parser::parse() {
 
     bool expectOperand = true;
 
+    auto emitOperator = [&](const std::string& name) {
+        if (name == "u-")
+            output.push_back(Token{TokenType::FUNCTION, 0, "neg", 1});
+        else
+            output.push_back(Token{TokenType::OPERATOR, 0, name, 0});
+    };
+
+    auto emitFunction = [&](const std::string& name) {
+        if (arityStack.empty())
+            throw CalculatorException("Internal parser error: function arity underflow");
+
+        int arity = arityStack.top();
+        arityStack.pop();
+
+        if (arity < 1 || arity > 2)
+            throw CalculatorException("Function '" + name + "' expects 1 or 2 arguments");
+
+        output.push_back(Token{TokenType::FUNCTION, 0, name, arity});
+    };
+
     auto flushOps = [&](int prec, bool rightAssoc) {
         while (!opStack.empty() && !opStack.top().isFunc && opStack.top().name != "(") {
             const std::string& top = opStack.top().name;
@@ -56,10 +67,7 @@ std::vector<Token> Parser::parse() {
             if (topPrec < prec) break;
             if (topPrec == prec && rightAssoc) break;
             opStack.pop();
-            if (top == "u-")
-                output.push_back(Token{TokenType::FUNCTION, 0, "neg", 1});
-            else
-                output.push_back(Token{TokenType::OPERATOR, 0, top, 0});
+            emitOperator(top);
         }
     };
 
@@ -110,47 +118,55 @@ std::vector<Token> Parser::parse() {
         }
 
         if (t.type == TokenType::RIGHT_PAREN) {
+            if (expectOperand)
+                throw CalculatorException("Missing expression before ')'");
+
             while (!opStack.empty() && opStack.top().name != "(") {
                 OpEntry e = opStack.top(); opStack.pop();
-                if (e.isFunc) {
-                    int ar = arityStack.top(); arityStack.pop();
-                    output.push_back(Token{TokenType::FUNCTION, 0, e.name, ar});
-                } else if (e.name == "u-") {
-                    output.push_back(Token{TokenType::FUNCTION, 0, "neg", 1});
-                } else {
-                    output.push_back(Token{TokenType::OPERATOR, 0, e.name, 0});
-                }
+                if (e.isFunc)
+                    emitFunction(e.name);
+                else
+                    emitOperator(e.name);
             }
             if (opStack.empty())
                 throw CalculatorException("Mismatched parentheses: unexpected ')'");
+
             opStack.pop(); // discard "("
-            advance();
-            expectOperand = false;
 
             // If the top of opStack is a function, pop it now.
             if (!opStack.empty() && opStack.top().isFunc) {
-                int ar = arityStack.top(); arityStack.pop();
-                output.push_back(Token{TokenType::FUNCTION, 0, opStack.top().name, ar});
+                emitFunction(opStack.top().name);
                 opStack.pop();
             }
+
+            advance();
+            expectOperand = false;
             continue;
         }
 
         if (t.type == TokenType::COMMA) {
+            if (expectOperand)
+                throw CalculatorException("Missing argument before ','");
+
             while (!opStack.empty() && opStack.top().name != "(") {
                 OpEntry e = opStack.top(); opStack.pop();
-                if (e.isFunc) {
-                    int ar = arityStack.top(); arityStack.pop();
-                    output.push_back(Token{TokenType::FUNCTION, 0, e.name, ar});
-                } else if (e.name == "u-") {
-                    output.push_back(Token{TokenType::FUNCTION, 0, "neg", 1});
-                } else {
-                    output.push_back(Token{TokenType::OPERATOR, 0, e.name, 0});
-                }
+                if (e.isFunc)
+                    emitFunction(e.name);
+                else
+                    emitOperator(e.name);
             }
             if (opStack.empty())
                 throw CalculatorException("Unexpected ','");
-            if (!arityStack.empty()) arityStack.top()++;
+
+            // Commas are valid only inside function argument lists.
+            opStack.pop();
+            bool inFunctionCall = !opStack.empty() && opStack.top().isFunc;
+            opStack.push({"(", false});
+
+            if (!inFunctionCall || arityStack.empty())
+                throw CalculatorException("Unexpected ','");
+
+            arityStack.top()++;
             advance();
             expectOperand = true;
             continue;
@@ -164,13 +180,9 @@ std::vector<Token> Parser::parse() {
         if (e.name == "(")
             throw CalculatorException("Mismatched parentheses: unclosed '('");
         if (e.isFunc) {
-            int ar = arityStack.empty() ? 1 : arityStack.top();
-            if (!arityStack.empty()) arityStack.pop();
-            output.push_back(Token{TokenType::FUNCTION, 0, e.name, ar});
-        } else if (e.name == "u-") {
-            output.push_back(Token{TokenType::FUNCTION, 0, "neg", 1});
+            emitFunction(e.name);
         } else {
-            output.push_back(Token{TokenType::OPERATOR, 0, e.name, 0});
+            emitOperator(e.name);
         }
     }
 

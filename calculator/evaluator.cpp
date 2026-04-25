@@ -38,6 +38,8 @@ double Evaluator::evaluate(const std::vector<Token>& rpn) {
 
             case TokenType::FUNCTION: {
                 int arity = t.arity;
+                if (arity != 1 && arity != 2)
+                    throw CalculatorException("Unsupported arity for function '" + t.name + "'");
                 if (static_cast<int>(st.size()) < arity)
                     throw CalculatorException("Insufficient arguments for '" + t.name + "'");
                 if (arity == 2) {

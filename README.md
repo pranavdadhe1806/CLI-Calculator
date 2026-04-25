@@ -155,6 +155,22 @@ Angle mode set to RADIAN
 9
 ```
 
+## Manual Testing (Phase 4)
+
+- Full manual suite: [MANUAL_TEST_SUITE.md](MANUAL_TEST_SUITE.md)
+- Validation scope: arithmetic, precedence/associativity, functions/constants, angle mode, parser errors, evaluator/runtime errors
+- Latest verification run: **2026-04-25**
+- Result: **26 / 26 test cases passed**
+
+### Quick Validation Command (Windows PowerShell)
+
+```powershell
+Set-Location calculator
+g++ -std=c++17 -Wall -Wextra -O2 *.cpp -o calculator.exe
+```
+
+Then run the expressions listed in [MANUAL_TEST_SUITE.md](MANUAL_TEST_SUITE.md) and compare outputs.
+
 ## Design Principles
 
 1. **Separation of Concerns**: Each module has a single, well-defined responsibility
