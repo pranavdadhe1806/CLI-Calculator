@@ -1,5 +1,6 @@
 build/
 *.exe
+!calculator_v1.0.0.exe
 *.o
 *.obj
 .vscode/
